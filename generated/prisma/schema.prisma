@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://sudhan:2412@localhost:5432/ira_roster?schema=public"
+}
+
+model Team {
+  id              String   @id @default(uuid())
+  name            String
+  nameNormalized  String   @unique
+  rosterName      String
+  managerName     String
+  managerEmail    String
+  whatsappNumber  String?
+  pinHash         String
+  sharePin        String?
+  enabledProducts String[] @default(["jersey", "trousers", "shorts", "jacket", "hoodie", "travelPolo"])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  players Player[]
+
+  @@index([nameNormalized])
+}
+
+model Player {
+  id               String   @id @default(uuid())
+  teamId           String
+  name             String
+  jerseyNumber     Int
+  sizeUS           String
+  trousersSizeUS   String?
+  shortsSizeUS     String?
+  jacketSizeUS     String?
+  hoodieSizeUS     String?
+  travelPoloSizeUS String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+model PinAttempt {
+  id          String    @id @default(uuid())
+  teamId      String
+  ip          String
+  count       Int       @default(0)
+  lockedUntil DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([teamId, ip])
+}
+
+model AdminOtp {
+  id              String    @id @default(uuid())
+  email           String
+  emailNormalized String
+  otpHash         String
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([emailNormalized, expiresAt])
+}

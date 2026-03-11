@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated-client/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id             String   @id @default(uuid())
+  name           String
+  nameNormalized String   @unique
+  rosterName     String
+  managerName    String
+  managerEmail   String
+  whatsappNumber String?
+  pinHash        String
+  sharePin       String?
+  rosterTemplate String   @default("sublimation")
+  enabledProducts String[] @default(["playingTShirt", "trousers", "trainingTShirt", "shorts", "travelJacket", "travelTrousers", "sleevelessJacket", "travelPolo", "hat", "cap"])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  players Player[]
+
+  @@index([nameNormalized])
+}
+
+model Player {
+  id           String   @id @default(uuid())
+  teamId       String
+  name         String
+  jerseyNumber Int
+  gender       String   @default("MEN")
+  sleeveType   String   @default("HALF")
+  sizeUS       String
+  playingTShirtQty Int @default(1)
+  trousersSizeUS String?
+  trousersQty  Int?
+  trainingTShirtSizeUS String?
+  trainingTShirtQty Int?
+  shortsSizeUS String?
+  shortsQty Int?
+  jacketSizeUS String?
+  jacketQty Int?
+  travelTrousersSizeUS String?
+  travelTrousersQty Int?
+  sleevelessJacketSizeUS String?
+  sleevelessJacketQty Int?
+  hoodieSizeUS String?
+  hoodieQty Int?
+  travelPoloSizeUS String?
+  travelPoloQty Int?
+  hatQty Int?
+  capQty Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+model PinAttempt {
+  id        String   @id @default(uuid())
+  teamId    String
+  ip        String
+  count     Int      @default(0)
+  lockedUntil DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teamId, ip])
+}
+
+model AdminOtp {
+  id              String   @id @default(uuid())
+  email           String
+  emailNormalized String
+  otpHash         String
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  @@index([emailNormalized, expiresAt])
+}

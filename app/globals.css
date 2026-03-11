@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-ira-gray text-slate-900 font-sans;
+}
+
+.ira-card {
+  @apply bg-white rounded-xl shadow-sm border border-slate-200;
+}
+
+.ira-button-primary {
+  @apply inline-flex items-center justify-center rounded-lg bg-ira-navy px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#1f1f52] transition-colors disabled:opacity-60;
+}
+
+.ira-button-secondary {
+  @apply inline-flex items-center justify-center rounded-lg border border-ira-navy bg-white px-4 py-2 text-sm font-semibold text-ira-navy hover:bg-blue-50 transition-colors;
+}
