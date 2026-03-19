@@ -20,8 +20,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const email = parsed.data.email.trim();
-    const emailNormalized = email.toLowerCase();
+    const emailNormalized = parsed.data.email.trim().toLowerCase();
 
     const otpRecord = await prisma.adminOtp.findFirst({
       where: {
@@ -51,7 +50,7 @@ export async function POST(req: NextRequest) {
       data: { consumedAt: new Date() }
     });
 
-    setAdminSessionCookie(email);
+    setAdminSessionCookie(otpRecord.email);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error(err);

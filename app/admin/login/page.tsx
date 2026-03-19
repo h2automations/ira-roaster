@@ -11,6 +11,7 @@ export default function AdminLoginPage() {
   const [otpRequested, setOtpRequested] = useState(false);
   const [loading, setLoading] = useState(false);
   const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
 
@@ -42,6 +43,7 @@ export default function AdminLoginPage() {
       }
       setOtpRequested(true);
       setDevOtp(data?.devOtp || null);
+      setSentTo(data?.sentTo || null);
     } finally {
       setLoading(false);
     }
@@ -79,7 +81,8 @@ export default function AdminLoginPage() {
       </Link>
       <h1 className="text-xl font-semibold text-ira-navy mb-2">Admin Login</h1>
       <p className="text-sm text-slate-600 mb-6">
-        Sign in with email and one-time passcode.
+        Sign in with email. OTP is sent to the WhatsApp number configured for
+        that admin email.
       </p>
 
       {error && (
@@ -108,6 +111,11 @@ export default function AdminLoginPage() {
         </form>
       ) : (
         <form className="space-y-4" onSubmit={verifyOtp}>
+          {sentTo && (
+            <p className="text-xs text-slate-500">
+              OTP sent to WhatsApp: <span className="font-medium">{sentTo}</span>
+            </p>
+          )}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               OTP
