@@ -2,8 +2,17 @@ import twilio from "twilio";
 
 type WhatsappProvider = "twilio" | "meta";
 
-const provider = (process.env.WHATSAPP_PROVIDER ||
-  "meta") as WhatsappProvider;
+function resolveWhatsappProvider(): WhatsappProvider {
+  const configuredProvider = (process.env.WHATSAPP_PROVIDER || "meta")
+    .trim()
+    .toLowerCase();
+  if (configuredProvider === "twilio" || configuredProvider === "meta") {
+    return configuredProvider;
+  }
+  return "meta";
+}
+
+const provider = resolveWhatsappProvider();
 
 function normalizePhoneNumber(raw: string): string {
   const trimmed = raw.trim();
@@ -14,7 +23,12 @@ function normalizePhoneNumber(raw: string): string {
   return withoutPrefix.startsWith("+") ? withoutPrefix : `+${withoutPrefix}`;
 }
 
-function maskPhoneNumber(raw: string): string {
+function toTwilioWhatsappAddress(raw: string): string {
+  const normalized = normalizePhoneNumber(raw);
+  return normalized ? `whatsapp:${normalized}` : normalized;
+}
+
+export function maskPhoneNumber(raw: string): string {
   const normalized = normalizePhoneNumber(raw);
   if (normalized.length <= 6) return normalized;
   return `${normalized.slice(0, 4)}******${normalized.slice(-2)}`;
@@ -119,7 +133,7 @@ export async function sendWhatsapp(params: {
     try {
       await client.messages.create({
         from,
-        to,
+        to: toTwilioWhatsappAddress(to),
         body: message
       });
     } catch (err) {
@@ -138,21 +152,49 @@ export async function sendAdminOtpWhatsapp(params: {
   to: string;
   otp: string;
 }): Promise<{ maskedTo: string }> {
-  const templateName = process.env.WHATSAPP_TEMPLATE_NAME;
-  if (!templateName) {
-    throw new Error("WHATSAPP_TEMPLATE_NAME is missing.");
+  if (!params.to) {
+    throw new Error("WhatsApp number is missing.");
   }
 
-  await sendMetaTemplateMessage({
-    to: params.to,
-    templateName,
-    components: [
-      {
-        type: "body",
-        parameters: [{ type: "text", text: params.otp }]
-      }
-    ]
-  });
+  if (provider === "meta") {
+    const templateName = process.env.WHATSAPP_TEMPLATE_NAME;
+    if (!templateName) {
+      throw new Error("WHATSAPP_TEMPLATE_NAME is missing.");
+    }
 
-  return { maskedTo: maskPhoneNumber(params.to) };
+    await sendMetaTemplateMessage({
+      to: params.to,
+      templateName,
+      components: [
+        {
+          type: "body",
+          parameters: [{ type: "text", text: params.otp }]
+        }
+      ]
+    });
+
+    return { maskedTo: maskPhoneNumber(params.to) };
+  }
+
+  if (provider === "twilio") {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const from = process.env.TWILIO_WHATSAPP_FROM;
+    if (!accountSid || !authToken || !from) {
+      throw new Error("Twilio WhatsApp configuration is missing.");
+    }
+
+    const client = twilio(accountSid, authToken);
+    await client.messages.create({
+      from,
+      to: toTwilioWhatsappAddress(params.to),
+      body: `Your admin OTP is ${params.otp}. It expires in 5 minutes.`
+    });
+
+    return { maskedTo: maskPhoneNumber(params.to) };
+  }
+
+  throw new Error(
+    `[WhatsApp] Unsupported WHATSAPP_PROVIDER "${provider}" for OTP send.`
+  );
 }

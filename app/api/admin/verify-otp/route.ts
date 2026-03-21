@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ok = await bcrypt.compare(parsed.data.otp, otpRecord.otpHash);
+    const ok = await bcrypt.compare(parsed.data.otp.trim(), otpRecord.otpHash);
     if (!ok) {
       return NextResponse.json(
         { error: "Unable to verify OTP. Please try again." },
@@ -45,10 +45,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await prisma.adminOtp.update({
-      where: { id: otpRecord.id },
-      data: { consumedAt: new Date() }
+    const consumeResult = await prisma.adminOtp.updateMany({
+      where: {
+        id: otpRecord.id,
+        consumedAt: null
+      },
+      data: {
+        consumedAt: new Date()
+      }
     });
+    if (consumeResult.count !== 1) {
+      return NextResponse.json(
+        { error: "Unable to verify OTP. Please try again." },
+        { status: 400 }
+      );
+    }
 
     setAdminSessionCookie(otpRecord.email);
     return NextResponse.json({ success: true });

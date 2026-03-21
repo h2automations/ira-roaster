@@ -44,6 +44,12 @@ export default function AdminLoginPage() {
       setOtpRequested(true);
       setDevOtp(data?.devOtp || null);
       setSentTo(data?.sentTo || null);
+      if (data?.devOtp) {
+        alert(`[TEST MODE] Your OTP is: ${data.devOtp}`);
+      }
+      if (data?.devOtp) {
+        alert(`[TEST MODE] Your OTP is: ${data.devOtp}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,8 +87,7 @@ export default function AdminLoginPage() {
       </Link>
       <h1 className="text-xl font-semibold text-ira-navy mb-2">Admin Login</h1>
       <p className="text-sm text-slate-600 mb-6">
-        Sign in with email. OTP is sent to the WhatsApp number configured for
-        that admin email.
+        Sign in with your admin email. An OTP will be sent to your email address.
       </p>
 
       {error && (
@@ -113,7 +118,7 @@ export default function AdminLoginPage() {
         <form className="space-y-4" onSubmit={verifyOtp}>
           {sentTo && (
             <p className="text-xs text-slate-500">
-              OTP sent to WhatsApp: <span className="font-medium">{sentTo}</span>
+              OTP sent to email: <span className="font-medium">{sentTo}</span>
             </p>
           )}
           <div>
@@ -121,13 +126,16 @@ export default function AdminLoginPage() {
               OTP
             </label>
             <input
+              type="text"
               required
               inputMode="numeric"
               pattern="\d*"
               minLength={6}
               maxLength={6}
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(e) =>
+                setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ira-navy/60"
             />
           </div>
@@ -135,7 +143,11 @@ export default function AdminLoginPage() {
             <p className="text-xs text-slate-500">Dev OTP: <span className="font-medium">{devOtp}</span></p>
           )}
           <div className="flex gap-2">
-            <button type="submit" className="ira-button-primary" disabled={loading}>
+            <button
+              type="submit"
+              className="ira-button-primary"
+              disabled={loading || otp.length !== 6}
+            >
               {loading ? "Verifying..." : "Verify OTP"}
             </button>
             <button
@@ -145,6 +157,9 @@ export default function AdminLoginPage() {
               onClick={() => {
                 setOtpRequested(false);
                 setOtp("");
+                setSentTo(null);
+                setDevOtp(null);
+                setError(null);
               }}
             >
               Back

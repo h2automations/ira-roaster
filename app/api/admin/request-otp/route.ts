@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../../../../lib/prisma";
-import { sendAdminOtpWhatsapp } from "../../../../lib/whatsapp";
+import { sendAdminOtpEmail } from "../../../../lib/email";
 
 const schema = z.object({
   email: z.string().email()
@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
     }
 
     const email = parsed.data.email.trim();
-    const emailNormalized = email.toLowerCase();
     const managerTeam = await prisma.team.findFirst({
       where: {
         managerEmail: {
@@ -33,27 +32,31 @@ export async function POST(req: NextRequest) {
         createdAt: "desc"
       },
       select: {
-        managerEmail: true,
-        whatsappNumber: true
+        managerEmail: true
       }
     });
 
-    if (!managerTeam?.whatsappNumber) {
+    if (!managerTeam) {
       return NextResponse.json(
-        {
-          error:
-            "WhatsApp number is not configured for this admin email. Please contact support."
-        },
+        { error: "No account found for this email." },
         { status: 400 }
       );
     }
 
     const canonicalEmail = managerTeam.managerEmail.trim();
+    const emailNormalized = canonicalEmail.toLowerCase();
     const otp = generateOtp();
     const otpHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    await prisma.adminOtp.create({
+    await prisma.adminOtp.deleteMany({
+      where: {
+        emailNormalized,
+        consumedAt: null
+      }
+    });
+
+    const otpRecord = await prisma.adminOtp.create({
       data: {
         email: canonicalEmail,
         emailNormalized,
@@ -62,24 +65,13 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    if (process.env.NODE_ENV === "production") {
-      const result = await sendAdminOtpWhatsapp({
-        to: managerTeam.whatsappNumber,
-        otp
-      });
-      return NextResponse.json({
-        success: true,
-        channel: "whatsapp",
-        sentTo: result.maskedTo
-      });
-    }
-
+    // TODO: remove devOtp from response before go-live
     console.log(`[admin-otp] ${canonicalEmail}: ${otp}`);
     return NextResponse.json({
       success: true,
       devOtp: otp,
-      channel: "whatsapp",
-      sentTo: managerTeam.whatsappNumber
+      channel: "email",
+      sentTo: canonicalEmail
     });
   } catch (err) {
     console.error(err);
