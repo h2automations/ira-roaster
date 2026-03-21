@@ -22,23 +22,36 @@ export async function POST(req: NextRequest) {
 
     const emailNormalized = parsed.data.email.trim().toLowerCase();
 
-    const otpRecord = await prisma.adminOtp.findFirst({
+    const otpRecords = await prisma.adminOtp.findMany({
       where: {
         emailNormalized,
-        consumedAt: null
+        consumedAt: null,
+        expiresAt: {
+          gte: new Date()
+        }
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      take: 5
     });
 
-    if (!otpRecord || otpRecord.expiresAt < new Date()) {
+    if (!otpRecords.length) {
       return NextResponse.json(
         { error: "Unable to verify OTP. Please try again." },
         { status: 400 }
       );
     }
 
-    const ok = await bcrypt.compare(parsed.data.otp.trim(), otpRecord.otpHash);
-    if (!ok) {
+    const enteredOtp = parsed.data.otp.trim();
+    let matchedRecord: (typeof otpRecords)[number] | null = null;
+    for (const record of otpRecords) {
+      const ok = await bcrypt.compare(enteredOtp, record.otpHash);
+      if (ok) {
+        matchedRecord = record;
+        break;
+      }
+    }
+
+    if (!matchedRecord) {
       return NextResponse.json(
         { error: "Unable to verify OTP. Please try again." },
         { status: 400 }
@@ -47,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const consumeResult = await prisma.adminOtp.updateMany({
       where: {
-        id: otpRecord.id,
+        id: matchedRecord.id,
         consumedAt: null
       },
       data: {
@@ -61,7 +74,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    setAdminSessionCookie(otpRecord.email);
+    setAdminSessionCookie(matchedRecord.email);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error(err);
