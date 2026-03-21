@@ -14,9 +14,15 @@ type AdminSessionPayload = {
 };
 
 function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET missing");
-  return secret;
+  const raw = process.env.JWT_SECRET;
+  const secret = raw?.trim().replace(/^["']|["']$/g, "");
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV !== "production") {
+    return "ira_roster_dev_fallback_secret_change_me";
+  }
+
+  throw new Error("JWT_SECRET missing");
 }
 
 
