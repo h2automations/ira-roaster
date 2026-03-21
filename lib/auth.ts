@@ -25,6 +25,13 @@ function getJwtSecret(): string {
   throw new Error("JWT_SECRET missing");
 }
 
+function shouldUseSecureCookies(): boolean {
+  const explicit = process.env.COOKIE_SECURE?.trim().toLowerCase();
+  if (explicit === "true") return true;
+  if (explicit === "false") return false;
+  return process.env.NODE_ENV === "production";
+}
+
 
 export function signSession(teamId: string): string {
   const secret = getJwtSecret();
@@ -57,7 +64,7 @@ export function setSessionCookie(teamId: string) {
   const cookieStore = cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     sameSite: "lax",
     maxAge: SESSION_TTL_SECONDS,
     path: "/"
@@ -68,7 +75,7 @@ export function clearSessionCookie() {
   const cookieStore = cookies();
   cookieStore.set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     sameSite: "lax",
     maxAge: 0,
     path: "/"
@@ -105,7 +112,7 @@ export function setAdminSessionCookie(email: string) {
   const cookieStore = cookies();
   cookieStore.set(ADMIN_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     sameSite: "lax",
     maxAge: ADMIN_SESSION_TTL_SECONDS,
     path: "/"
@@ -116,7 +123,7 @@ export function clearAdminSessionCookie() {
   const cookieStore = cookies();
   cookieStore.set(ADMIN_COOKIE_NAME, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(),
     sameSite: "lax",
     maxAge: 0,
     path: "/"
